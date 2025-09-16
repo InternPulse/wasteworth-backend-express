@@ -1,0 +1,8 @@
+#NODE-MODULES
+node_modules/
+.history/
+
+
+#ENVIRONMENT VARIABLES
+.env
+.prettierrc
