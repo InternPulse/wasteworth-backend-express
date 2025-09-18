@@ -5,6 +5,9 @@ const app = express();
 
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
+const ListingRouter = require('./router/listingRouter');
+const { User } = require('./db/models');
+
 //development-logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
@@ -16,12 +19,18 @@ app.use(cookiesParser());
 
 //routes//
 //-test-route
-app.get('/api/v1/test', (req, res) => {
+app.get('/api/v1/test', async (req, res) => {
+  const user = await User.findAll();
+
   res.status(200).json({
     status: 'success',
-    message: 'working....',
+    length: user.length,
+    data: user,
   });
 });
+
+//main-routes
+app.use('/api/v1/listings', ListingRouter);
 
 app.use((req, res, next) => {
   return next(

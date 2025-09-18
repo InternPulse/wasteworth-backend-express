@@ -6,3 +6,7 @@ node_modules/
 #ENVIRONMENT VARIABLES
 .env
 .prettierrc
+
+##ORM
+.sequelizerc
+.certs/
