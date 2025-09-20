@@ -4,7 +4,7 @@ module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define(
     'User',
     {
-      userId: {
+      id: {
         type: DataTypes.UUID,
         primaryKey: true,
         defaultValue: DataTypes.UUIDV4,
@@ -37,6 +37,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
       },
+      is_verified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
       date_joined: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -49,26 +53,26 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      referralCode: {
+      referral_code: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      referredBy: {
+      referred_by: {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
-      location: {
+      address_location: {
         type: DataTypes.JSONB,
         allowNull: true,
         defaultValue: null,
       },
-      walletBalance: {
+      wallet_balance: {
         type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0.0,
       },
     },
     {
-      tableName: 'users_user',
+      tableName: 'users',
       timestamps: true,
       createdAt: 'createdAt',
       updatedAt: 'updatedAt',
@@ -76,8 +80,8 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   User.associate = (models) => {
-    User.hasMany(models.Listing, { foreignKey: 'userId_id' });
-    User.hasMany(models.Listing, { foreignKey: 'collectorId_id' });
+    User.hasMany(models.Listing, { foreignKey: 'user_id_id' });
+    User.hasMany(models.Listing, { foreignKey: 'collector_id_id' });
   };
 
   return User;
