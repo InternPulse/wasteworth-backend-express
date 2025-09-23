@@ -6,6 +6,7 @@ const app = express();
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const ListingRouter = require('./router/listingRouter');
+const notificationRouter = require('./router/notificationRouter');
 const { User } = require('./db/models');
 
 //development-logging
@@ -31,6 +32,7 @@ app.get('/api/v1/test', async (req, res) => {
 
 //main-routes
 app.use('/api/v1/listings', ListingRouter);
+app.use('/api/v1/notification', notificationRouter);
 
 app.use((req, res, next) => {
   return next(
