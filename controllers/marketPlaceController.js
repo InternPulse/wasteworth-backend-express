@@ -33,6 +33,7 @@ exports.acceptListing = catchAsync(async (req, res, next) => {
     return next(new AppError('Listing belonging to this ID not found'));
   await listing.update({
     status: 'accepted',
+    collector_id_id: req.user.id,
   });
 
   //2) update marketPlace listing Also
@@ -44,7 +45,7 @@ exports.acceptListing = catchAsync(async (req, res, next) => {
     },
   });
   await marketPlaceListing.update({
-    recycler_id_id: '95ed00e6-83b3-40fe-b33c-7c139e11b797',
+    recycler_id_id: req.user.id,
   });
 
   res.status(200).json({

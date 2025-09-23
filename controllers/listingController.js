@@ -9,7 +9,7 @@ exports.createListing = catchAsync(async (req, res, next) => {
     reward_estimate: req.body.reward_estimate,
     final_reward: req.body.final_reward,
     pickup_location: req.body.pickup_location,
-    user_id_id: req.body.user_id_id,
+    user_id_id: req.user.id,
     collector_id_id: req.body.collector_id_id,
   };
 

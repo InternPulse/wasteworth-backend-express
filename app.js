@@ -7,7 +7,11 @@ const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const ListingRouter = require('./router/listingRouter');
 const MarketPlaceRouter = require('./router/marketplaceRouter');
-const { User } = require('./db/models');
+const {
+  protect,
+  restrict,
+  restrictTo,
+} = require('./controllers/authController');
 
 //development-logging
 if (process.env.NODE_ENV === 'development') {
@@ -20,15 +24,18 @@ app.use(cookiesParser());
 
 //routes//
 //-test-route
-app.get('/api/v1/test', async (req, res) => {
-  const user = await User.findAll();
-
-  res.status(200).json({
-    status: 'success',
-    length: user.length,
-    data: user,
-  });
-});
+app.get(
+  '/api/v1/test',
+  protect,
+  restrictTo('collector', 'disposer'),
+  async (req, res) => {
+    res.status(200).json({
+      status: 'success',
+      length: 1,
+      data: 'working',
+    });
+  }
+);
 
 //main-routes
 app.use('/api/v1/listings', ListingRouter);
