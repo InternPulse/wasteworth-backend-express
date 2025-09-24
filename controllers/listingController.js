@@ -1,6 +1,6 @@
-const AppError = require('../utils/appError');
-const catchAsync = require('../utils/catchAsync');
-const { Listing, MarketplaceListing } = require('../db/models');
+const AppError = require("../utils/appError");
+const catchAsync = require("../utils/catchAsync");
+const { Listing, MarketplaceListing, User } = require("../db/models");
 
 exports.createListing = catchAsync(async (req, res, next) => {
   const payload = {
@@ -14,7 +14,7 @@ exports.createListing = catchAsync(async (req, res, next) => {
   };
 
   const listing = await Listing.create(payload);
-  if (!listing) return next(new AppError('Error creating listing', 500));
+  if (!listing) return next(new AppError("Error creating listing", 500));
   // console.log("Listing created successfully:", listing.toJSON());
 
   // create a market place listing, if listing is successful
@@ -23,10 +23,10 @@ exports.createListing = catchAsync(async (req, res, next) => {
   });
 
   if (!marketplace_listing)
-    return next(new AppError('Error creating marketplaceListing', 500));
+    return next(new AppError("Error creating marketplaceListing", 500));
 
   res.status(201).json({
-    status: 'success',
+    status: "success",
     data: listing,
   });
 });
@@ -36,14 +36,61 @@ exports.getAllListings = catchAsync(async (req, res, next) => {
     const listings = await Listing.findAll();
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       results: listings.length,
       data: listings,
     });
   } catch (err) {
-    console.error('Error in getAllListings:', err);
+    console.error("Error in getAllListings:", err);
     return next(new AppError(err.message, 500));
   }
+});
+
+exports.getListingById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const listing = await Listing.findByPk(id, {
+    include: [
+      {
+        model: User,
+        as: "creator",
+        attributes: ["userId", "name", "email", "phone"],
+      },
+      {
+        model: User,
+        as: "collector",
+        attributes: ["userId", "name", "email", "phone"],
+      },
+    ],
+  });
+
+  if (!listing) {
+    return next(new AppError("No listing found with that ID", 404));
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      listing,
+    },
+  });
+});
+
+exports.deleteListing = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const listing = await Listing.findByPk(id);
+
+  if (!listing) {
+    return next(new AppError("No listing found with that ID", 404));
+  }
+
+  await listing.destroy();
+
+  res.status(204).json({
+    status: "success",
+    data: null,
+  });
 });
 
 exports.updateListingStatus = catchAsync(async (req, res, next) => {
@@ -52,17 +99,17 @@ exports.updateListingStatus = catchAsync(async (req, res, next) => {
 
   try {
     const allowedStatuses = [
-      'pending',
-      'accepted',
-      'in-progress',
-      'completed',
-      'cancelled',
+      "pending",
+      "accepted",
+      "in-progress",
+      "completed",
+      "cancelled",
     ];
 
     if (!allowedStatuses.includes(status)) {
       return next(
         new AppError(
-          `Invalid status. Allowed values: ${allowedStatuses.join(', ')}`,
+          `Invalid status. Allowed values: ${allowedStatuses.join(", ")}`,
           400
         )
       );
@@ -71,14 +118,14 @@ exports.updateListingStatus = catchAsync(async (req, res, next) => {
     const listing = await Listing.findByPk(id);
     if (!listing) {
       console.warn(`⚠️ Listing with id ${id} not found`);
-      return next(new AppError('Listing not found', 404));
+      return next(new AppError("Listing not found", 404));
     }
 
     listing.status = status;
     await listing.save();
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       message: `Listing status updated to '${status}'`,
       data: {
         id: listing.id,
