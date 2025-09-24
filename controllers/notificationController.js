@@ -10,7 +10,7 @@ exports.getUserNotifications = catchAsync(async (req, res) => {
   // Validate userId
   const parsedUserId = parseInt(userId);
   if (isNaN(parsedUserId)) {
-    throw new AppError('Invalid user ID provided', 400);
+    throw new AppError("Invalid user ID provided", 400);
   }
 
   // Validate pagination params
@@ -19,39 +19,42 @@ exports.getUserNotifications = catchAsync(async (req, res) => {
   const offset = (parsedPage - 1) * parsedLimit;
 
   if (isNaN(parsedPage)) {
-    throw new AppError('Invalid page number provided', 400);
+    throw new AppError("Invalid page number provided", 400);
   }
   if (isNaN(parsedLimit)) {
-    throw new AppError('Invalid limit provided. Must be between 1 and 100', 400);
+    throw new AppError(
+      "Invalid limit provided. Must be between 1 and 100",
+      400
+    );
   }
 
   // Build where clause with optional filters
   const where = { userId: parsedUserId };
   if (isRead !== undefined) {
-    where.isRead = isRead === 'true';
+    where.isRead = isRead === "true";
   }
-  if (type && ['pickup', 'reward', 'marketplace', 'general'].includes(type)) {
+  if (type && ["pickup", "reward", "marketplace", "general"].includes(type)) {
     where.type = type;
   } else if (type) {
-    throw new AppError('Invalid notification type provided', 400);
+    throw new AppError("Invalid notification type provided", 400);
   }
 
-
   // Query with pagination and filters
-  const { count, rows: notifications } = await models.Notification.findAndCountAll({
-    where,
-    order: [['createdAt', 'DESC']],
-    limit: parsedLimit,
-    offset,
-    include: [
-      {
-        model: models.User,
-        as: 'user',
-        attributes: ['id', 'username'],
-        required: false, 
-      },
-    ],
-  });
+  const { count, rows: notifications } =
+    await models.Notification.findAndCountAll({
+      where,
+      order: [["createdAt", "DESC"]],
+      limit: parsedLimit,
+      offset,
+      include: [
+        {
+          model: models.User,
+          as: "user",
+          attributes: ["id", "username"],
+          required: false,
+        },
+      ],
+    });
 
   const totalPages = Math.ceil(count / parsedLimit);
 
@@ -69,38 +72,39 @@ exports.getUserNotifications = catchAsync(async (req, res) => {
   });
 });
 
+exports.sendNotification = catchAsync(async (req, res) => {
+  const { userId, type, message } = req.body;
 
+  // Validate request body
+  if (!userId || !type || !message) {
+    throw new AppError("Missing required fields: userId, type, message", 400);
+  }
 
-  exports.sendNotification = catchAsync (async (req, res) => {
-    const { userId, type, message } = req.body;
+  // Validate notification type
+  const validTypes = ["pickup", "reward", "marketplace", "general"];
+  if (!validTypes.includes(type)) {
+    throw new AppError(
+      `Invalid notification type. Must be one of: ${validTypes.join(", ")}`,
+      400
+    );
+  }
 
-    // Validate request body
-    if (!userId || !type || !message) {
-      throw new AppError('Missing required fields: userId, type, message', 400);
-    }
+  // Validate userId is a number
+  const parsedUserId = parseInt(userId);
+  if (isNaN(parsedUserId)) {
+    throw new AppError("Invalid user ID provided", 400);
+  }
 
-    // Validate notification type
-    const validTypes = ['pickup', 'reward', 'marketplace', 'general'];
-    if (!validTypes.includes(type)) {
-      throw new AppError(`Invalid notification type. Must be one of: ${validTypes.join(', ')}`, 400);
-    }
-
-    // Validate userId is a number
-    const parsedUserId = parseInt(userId);
-    if (isNaN(parsedUserId)) {
-      throw new AppError('Invalid user ID provided', 400);
-    }
-
-    const notification = await models.Notification.create({
-      userId: parsedUserId,
-      type,
-      message,
-      createdAt: new Date(),
-      isRead: false, 
-    });
-
-    res.status(201).json({
-      success: true,
-      notification,
-    });
+  const notification = await models.Notification.create({
+    userId: parsedUserId,
+    type,
+    message,
+    createdAt: new Date(),
+    isRead: false,
   });
+
+  res.status(201).json({
+    success: true,
+    notification,
+  });
+});
