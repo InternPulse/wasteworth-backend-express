@@ -1,106 +1,136 @@
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
-const { Notification } = require("../db/models");
+const { Notification, User } = require("../db/models");
 
 // Get user notifications with pagination and optional filtering
 exports.getUserNotifications = catchAsync(async (req, res) => {
   const { userId } = req.params;
-  const { page = 1, limit = 20, isRead, type } = req.query;
+  const { page = 1, limit = 20, is_read, type } = req.query;
 
-  // Validate userId
-  const parsedUserId = parseInt(userId);
-  if (isNaN(parsedUserId)) {
-    throw new AppError('Invalid user ID provided', 400);
+  // Validate userId as UUID
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(userId)) {
+    throw new AppError("Invalid user ID provided (must be a valid UUID)", 400);
   }
 
-  // Validate pagination params
-  const parsedPage = Math.max(1, parseInt(page));
-  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit)));
+  // Validate user exists
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  // Validate and sanitize pagination params
+  const parsedPage = Math.max(1, parseInt(page, 10));
+  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10)));
   const offset = (parsedPage - 1) * parsedLimit;
 
   if (isNaN(parsedPage)) {
-    throw new AppError('Invalid page number provided', 400);
+    throw new AppError("Invalid page number provided", 400);
   }
   if (isNaN(parsedLimit)) {
-    throw new AppError('Invalid limit provided. Must be between 1 and 100', 400);
+    throw new AppError(
+      "Invalid limit provided. Must be between 1 and 100",
+      400
+    );
   }
 
   // Build where clause with optional filters
-  const where = { userId: parsedUserId };
-  if (isRead !== undefined) {
-    where.isRead = isRead === 'true';
+  const where = { userId };
+  if (is_read !== undefined) {
+    where.is_read = is_read === "true";
   }
-  if (type && ['pickup', 'reward', 'marketplace', 'general'].includes(type)) {
+  if (type) {
+    const validTypes = ["pickup", "reward", "marketplace", "general"];
+    if (!validTypes.includes(type)) {
+      throw new AppError(
+        `Invalid notification type. Must be one of: ${validTypes.join(", ")}`,
+        400
+      );
+    }
     where.type = type;
-  } else if (type) {
-    throw new AppError('Invalid notification type provided', 400);
   }
 
-
-  // Query with pagination and filters
-  const { count, rows: notifications } = await models.Notification.findAndCountAll({
+  // Query with pagination, filters, and optimized attributes
+  const { count, rows: notifications } = await Notification.findAndCountAll({
     where,
-    order: [['createdAt', 'DESC']],
+    order: [["created_at", "DESC"]],
     limit: parsedLimit,
     offset,
+    attributes: [
+      "id",
+      "type",
+      "message",
+      ["is_read", "isRead"], // Map to camelCase in response
+      ["created_at", "createdAt"], // Map to camelCase in response
+    ],
     include: [
       {
-        model: models.User,
-        as: 'user',
-        attributes: ['id', 'username'],
-        required: false, 
+        model: User,
+        as: "user",
+        attributes: ["id", "name"],
+        required: false,
       },
     ],
   });
 
+  // Calculate pagination metadata
   const totalPages = Math.ceil(count / parsedLimit);
 
   res.status(200).json({
     success: true,
-    notifications,
-    pagination: {
-      currentPage: parsedPage,
-      totalPages,
-      totalCount: count,
-      limit: parsedLimit,
-      hasNextPage: parsedPage < totalPages,
-      hasPrevPage: parsedPage > 1,
+    data: {
+      notifications,
+      pagination: {
+        currentPage: parsedPage,
+        totalPages,
+        totalCount: count,
+        limit: parsedLimit,
+        hasNextPage: parsedPage < totalPages,
+        hasPrevPage: parsedPage > 1,
+      },
     },
   });
 });
 
+exports.sendNotification = catchAsync(async (req, res) => {
+  const { userId, type, message } = req.body;
 
+  if (!userId || !type || !message) {
+    throw new AppError("Missing required fields: userId, type, message", 400);
+  }
 
-  exports.sendNotification = catchAsync (async (req, res) => {
-    const { userId, type, message } = req.body;
+  const validTypes = ["pickup", "reward", "marketplace", "general"];
+  if (!validTypes.includes(type)) {
+    throw new AppError(
+      `Invalid notification type. Must be one of: ${validTypes.join(", ")}`,
+      400
+    );
+  }
 
-    // Validate request body
-    if (!userId || !type || !message) {
-      throw new AppError('Missing required fields: userId, type, message', 400);
-    }
+  // Validate userId is a valid UUID string (no parseInt)
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(userId)) {
+    throw new AppError("Invalid user ID provided (must be a valid UUID)", 400);
+  }
 
-    // Validate notification type
-    const validTypes = ['pickup', 'reward', 'marketplace', 'general'];
-    if (!validTypes.includes(type)) {
-      throw new AppError(`Invalid notification type. Must be one of: ${validTypes.join(', ')}`, 400);
-    }
+  // Validate user exists
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
 
-    // Validate userId is a number
-    const parsedUserId = parseInt(userId);
-    if (isNaN(parsedUserId)) {
-      throw new AppError('Invalid user ID provided', 400);
-    }
-
-    const notification = await models.Notification.create({
-      userId: parsedUserId,
-      type,
-      message,
-      createdAt: new Date(),
-      isRead: false, 
-    });
-
-    res.status(201).json({
-      success: true,
-      notification,
-    });
+  const notification = await Notification.create({
+    userId,
+    type,
+    message,
+    created_at: new Date(),
+    is_read: false,
   });
+
+  res.status(201).json({
+    success: true,
+    notification,
+  });
+});

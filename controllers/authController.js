@@ -26,7 +26,7 @@ exports.protect = catchAsync(async (req, res, next) => {
   const user = await User.findByPk(decoded.user_id);
   if (!user)
     return next(
-      new AppError('The user belonginf to this token does not exist', 401)
+      new AppError('The user belonging to this token does not exist', 401)
     );
   //check if user is verified
   if (!user.is_verified)

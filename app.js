@@ -41,7 +41,7 @@ app.get(
 //main-routes
 app.use('/api/v1/listings', ListingRouter);
 app.use('/api/v1/marketplace/listings', MarketPlaceRouter);
-app.use('/api/v1/notification', notificationRouter);
+app.use('/api/v1', notificationRouter);
 
 app.use((req, res, next) => {
   return next(
