@@ -1,6 +1,7 @@
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { Notification } = require("../db/models");
+const models = require("../db/models");
 
 // Get user notifications with pagination and optional filtering
 exports.getUserNotifications = catchAsync(async (req, res) => {
@@ -106,5 +107,62 @@ exports.sendNotification = catchAsync(async (req, res) => {
   res.status(201).json({
     success: true,
     notification,
+  });
+});
+
+exports.markNotificationAsRead = catchAsync(async (req, res) => {
+  const { userId, notificationId } = req.body;
+  if (!userId) {
+    throw new AppError("Missing required field: userId", 400);
+  }
+  if (!notificationId) {
+    throw new AppError("Missing required field: notificationId", 400);
+  }
+
+  const notification = await models.Notification.findOne({
+    where: {
+      id: notificationId,
+      userId,
+    },
+  });
+
+  if (!notification) {
+    throw new AppError("Notification not found", 404);
+  }
+
+  notification.isRead = true;
+  await notification.save();
+
+  res.status(200).json({
+    success: true,
+    notification,
+  });
+});
+
+// Delete a notification
+exports.deleteNotification = catchAsync(async (req, res) => {
+  const { userId, notificationId } = req.body;
+  if (!userId) {
+    throw new AppError("Missing required field: userId", 400);
+  }
+  if (!notificationId) {
+    throw new AppError("Missing required field: notificationId", 400);
+  }
+
+  const notification = await models.Notification.findOne({
+    where: {
+      id: notificationId,
+      userId,
+    },
+  });
+
+  if (!notification) {
+    throw new AppError("Notification not found", 404);
+  }
+
+  await notification.destroy();
+
+  res.status(204).json({
+    success: true,
   });
 });
