@@ -4,12 +4,12 @@ module.exports = (sequelize, DataTypes) => {
   const Listing = sequelize.define(
     'Listing',
     {
-      listingId: {
+      id: {
         type: DataTypes.UUID,
         primaryKey: true,
         defaultValue: DataTypes.UUIDV4,
       },
-      wasteType: {
+      waste_type: {
         type: DataTypes.ENUM('plastic', 'glass', 'paper'),
         allowNull: false,
       },
@@ -28,50 +28,54 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 'pending',
       },
-      rewardEstimate: {
+      reward_estimate: {
         type: DataTypes.NUMBER,
         allowNull: false,
       },
-      finalReward: {
+      final_reward: {
         type: DataTypes.NUMBER,
         allowNull: true,
       },
-      collectorId_id: {
+      collector_id_id: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
-          model: 'users_user',
-          key: 'userId',
+          model: 'users',
+          key: 'id',
         },
       },
-      userId_id: {
+      user_id_id: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: 'users_user',
-          key: 'userId',
+          model: 'users',
+          key: 'id',
         },
       },
-      pickupLocation: {
+      pickup_location: {
         type: DataTypes.JSONB,
         allowNull: true,
         defaultValue: null,
       },
     },
     {
-      tableName: 'listings_listing',
+      tableName: 'listings',
       timestamps: true,
-      createdAt: 'createdAt',
-      updatedAt: 'updatedAt',
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     }
   );
 
   Listing.associate = (models) => {
-    Listing.belongsTo(models.User, { foreignKey: 'userId_id', as: 'creator' }),
+    Listing.belongsTo(models.User, { foreignKey: 'user_id_id', as: 'creator' }),
       Listing.belongsTo(models.User, {
-        foreignKey: 'collectorId_id',
+        foreignKey: 'collector_id_id',
         as: 'collector',
       });
+    Listing.hasOne(models.MarketplaceListing, {
+      foreignKey: 'listing_id_id',
+      as: 'marketplaceListing',
+    });
   };
 
   return Listing;
