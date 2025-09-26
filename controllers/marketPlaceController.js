@@ -1,7 +1,7 @@
 const catchAsync = require('../utils/catchAsync');
 const { MarketplaceListing } = require('../db/models');
 const { Listing } = require('../db/models');
-const { Op } = require('sequelize');
+const { Op, where } = require('sequelize');
 const AppError = require('../utils/appError');
 
 exports.getAllMarketPlaceListing = catchAsync(async (req, res, next) => {
@@ -51,5 +51,24 @@ exports.acceptListing = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     message: 'Listing Accepted',
+  });
+});
+
+exports.getMyAcceptedListing = catchAsync(async (req, res, next) => {
+  const myAccepted = await MarketplaceListing.findAll({
+    where: {
+      recycler_id_id: req.user.id,
+    },
+    include: {
+      model: Listing,
+      as: 'listing',
+      attributes: ['id', 'status'],
+    },
+  });
+
+  res.status(200).json({
+    status: 'success',
+    length: myAccepted.length,
+    data: myAccepted,
   });
 });
