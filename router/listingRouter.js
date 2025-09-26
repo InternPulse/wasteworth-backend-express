@@ -4,7 +4,7 @@ const {
   getAllListings,
   updateListingStatus,
   getListingById,
-  deleteListing
+  deleteListing,
 } = require('../controllers/listingController');
 const { protect } = require('../controllers/authController');
 
@@ -13,8 +13,10 @@ const router = express.Router();
 //protect all route
 router.use(protect);
 router.route('/').post(createListing).get(getAllListings);
-router.route("/:id").get(getListingById).delete(deleteListing);
-
-router.route('/:id/status').patch(updateListingStatus);
+router
+  .route('/:id')
+  .get(getListingById)
+  .delete(deleteListing)
+  .patch(updateListingStatus);
 
 module.exports = router;

@@ -1,17 +1,17 @@
-const AppError = require("../utils/appError");
-const catchAsync = require("../utils/catchAsync");
-const { Notification } = require("../db/models");
-const models = require("../db/models");
+const AppError = require('../utils/appError');
+const catchAsync = require('../utils/catchAsync');
+const { Notification } = require('../db/models');
+const models = require('../db/models');
 
 // Get user notifications with pagination and optional filtering
 exports.getUserNotifications = catchAsync(async (req, res) => {
-  const { userId } = req.params;
+  const userId = req.user.id;
   const { page = 1, limit = 20, isRead, type } = req.query;
 
   // Validate userId
-  const parsedUserId = parseInt(userId);
-  if (isNaN(parsedUserId)) {
-    throw new AppError("Invalid user ID provided", 400);
+  const parsedUserId = userId; // already a string from JWT/session
+  if (!parsedUserId || typeof parsedUserId !== 'string') {
+    return new AppError('Invalid user ID provided', 400);
   }
 
   // Validate pagination params
@@ -20,11 +20,11 @@ exports.getUserNotifications = catchAsync(async (req, res) => {
   const offset = (parsedPage - 1) * parsedLimit;
 
   if (isNaN(parsedPage)) {
-    throw new AppError("Invalid page number provided", 400);
+    return new AppError('Invalid page number provided', 400);
   }
   if (isNaN(parsedLimit)) {
-    throw new AppError(
-      "Invalid limit provided. Must be between 1 and 100",
+    return new AppError(
+      'Invalid limit provided. Must be between 1 and 100',
       400
     );
   }
@@ -32,35 +32,35 @@ exports.getUserNotifications = catchAsync(async (req, res) => {
   // Build where clause with optional filters
   const where = { userId: parsedUserId };
   if (isRead !== undefined) {
-    where.isRead = isRead === "true";
+    where.isRead = isRead === 'true';
   }
-  if (type && ["pickup", "reward", "marketplace", "general"].includes(type)) {
+  if (type && ['pickup', 'reward', 'marketplace', 'general'].includes(type)) {
     where.type = type;
   } else if (type) {
-    throw new AppError("Invalid notification type provided", 400);
+    return new AppError('Invalid notification type provided', 400);
   }
 
   // Query with pagination and filters
-  const { count, rows: notifications } =
-    await models.Notification.findAndCountAll({
-      where,
-      order: [["createdAt", "DESC"]],
-      limit: parsedLimit,
-      offset,
-      include: [
-        {
-          model: models.User,
-          as: "user",
-          attributes: ["id", "username"],
-          required: false,
-        },
-      ],
-    });
+  const { count, rows: notifications } = await Notification.findAndCountAll({
+    where,
+    order: [['created_at', 'DESC']],
+    limit: parsedLimit,
+    offset,
+    include: [
+      {
+        model: models.User,
+        as: 'user',
+        attributes: ['id', 'name'],
+        required: false,
+      },
+    ],
+  });
 
   const totalPages = Math.ceil(count / parsedLimit);
 
   res.status(200).json({
-    success: true,
+    status: 'success',
+    length: notifications.length,
     notifications,
     pagination: {
       currentPage: parsedPage,
@@ -78,91 +78,79 @@ exports.sendNotification = catchAsync(async (req, res) => {
 
   // Validate request body
   if (!userId || !type || !message) {
-    throw new AppError("Missing required fields: userId, type, message", 400);
+    return new AppError('Missing required fields: userId, type, message', 400);
   }
 
   // Validate notification type
-  const validTypes = ["pickup", "reward", "marketplace", "general"];
+  const validTypes = ['pickup', 'reward', 'marketplace', 'general'];
   if (!validTypes.includes(type)) {
-    throw new AppError(
-      `Invalid notification type. Must be one of: ${validTypes.join(", ")}`,
+    return new AppError(
+      `Invalid notification type. Must be one of: ${validTypes.join(', ')}`,
       400
     );
   }
 
-  // Validate userId is a number
-  const parsedUserId = parseInt(userId);
-  if (isNaN(parsedUserId)) {
-    throw new AppError("Invalid user ID provided", 400);
-  }
-
   const notification = await models.Notification.create({
-    userId: parsedUserId,
+    userId,
     type,
     message,
-    createdAt: new Date(),
     isRead: false,
   });
 
   res.status(201).json({
-    success: true,
-    notification,
+    status: 'success',
+    data: notification,
   });
 });
 
 exports.markNotificationAsRead = catchAsync(async (req, res) => {
-  const { userId, notificationId } = req.body;
-  if (!userId) {
-    throw new AppError("Missing required field: userId", 400);
-  }
+  const { notificationId } = req.params;
+
   if (!notificationId) {
-    throw new AppError("Missing required field: notificationId", 400);
+    return new AppError('Missing required field: notificationId', 400);
   }
 
   const notification = await models.Notification.findOne({
     where: {
       id: notificationId,
-      userId,
+      userId: req.user.id,
     },
   });
 
   if (!notification) {
-    throw new AppError("Notification not found", 404);
+    return new AppError('Notification not found', 404);
   }
 
-  notification.isRead = true;
-  await notification.save();
+  await notification.update({ is_read: true });
 
   res.status(200).json({
-    success: true,
+    staus: 'success',
     notification,
   });
 });
 
 // Delete a notification
 exports.deleteNotification = catchAsync(async (req, res) => {
-  const { userId, notificationId } = req.body;
-  if (!userId) {
-    throw new AppError("Missing required field: userId", 400);
-  }
+  const { notificationId } = req.params;
+
   if (!notificationId) {
-    throw new AppError("Missing required field: notificationId", 400);
+    return new AppError('Missing required field: notificationId', 400);
   }
 
   const notification = await models.Notification.findOne({
     where: {
       id: notificationId,
-      userId,
+      userId: req.user.id,
     },
   });
 
   if (!notification) {
-    throw new AppError("Notification not found", 404);
+    return new AppError('Notification not found', 404);
   }
 
   await notification.destroy();
 
   res.status(204).json({
-    success: true,
+    status: 'success',
   });
 });

@@ -9,4 +9,4 @@ node_modules/
 
 ##ORM
 .sequelizerc
-.certs/
+

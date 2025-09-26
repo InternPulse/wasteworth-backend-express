@@ -8,11 +8,7 @@ const globalErrorHandler = require('./controllers/errorController');
 const ListingRouter = require('./router/listingRouter');
 const MarketPlaceRouter = require('./router/marketplaceRouter');
 const notificationRouter = require('./router/notificationRouter');
-const {
-  protect,
-  restrict,
-  restrictTo,
-} = require('./controllers/authController');
+const { protect, restrictTo } = require('./controllers/authController');
 
 //development-logging
 if (process.env.NODE_ENV === 'development') {
@@ -24,24 +20,9 @@ app.use(express.json());
 app.use(cookiesParser());
 
 //routes//
-//-test-route
-app.get(
-  '/api/v1/test',
-  protect,
-  restrictTo('collector', 'disposer'),
-  async (req, res) => {
-    res.status(200).json({
-      status: 'success',
-      length: 1,
-      data: 'working',
-    });
-  }
-);
-
-//main-routes
 app.use('/api/v1/listings', ListingRouter);
 app.use('/api/v1/marketplace/listings', MarketPlaceRouter);
-app.use('/api/v1/notification', notificationRouter);
+app.use('/api/v1/notifications', notificationRouter);
 
 app.use((req, res, next) => {
   return next(
