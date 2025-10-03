@@ -5,14 +5,19 @@ const {
   updateListingStatus,
   getListingById,
   deleteListing,
+  getUserListingData,
 } = require('../controllers/listingController');
-const { protect } = require('../controllers/authController');
+const {
+  protect,
+  VerifyExternalAccess,
+} = require('../controllers/authController');
 
 const router = express.Router();
 
 //protect all route
 router.use(protect);
 router.route('/').post(createListing).get(getAllListings);
+router.get('/listingstats', VerifyExternalAccess, getUserListingData);
 router
   .route('/:id')
   .get(getListingById)

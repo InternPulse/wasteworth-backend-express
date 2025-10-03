@@ -1,6 +1,7 @@
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const { Listing, MarketplaceListing, User } = require('../db/models');
+const { where } = require('sequelize');
 
 exports.createListing = catchAsync(async (req, res, next) => {
   const payload = {
@@ -148,4 +149,20 @@ exports.updateListingStatus = catchAsync(async (req, res, next) => {
   } catch (err) {
     return next(new AppError(err.message, 500));
   }
+});
+
+exports.getUserListingData = catchAsync(async (req, res, next) => {
+  const listingdata = await Listing.findAll({
+    where: { user_id_id: req.user.id },
+  });
+  const totalcompletedlisting = await Listing.findAll({
+    where: {
+      user_id_id: req.user.id,
+      status: 'completed',
+    },
+  });
+  res.status(200).json({
+    total_waste_posted: listingdata.length,
+    total_waste_completed: totalcompletedlisting.length,
+  });
 });

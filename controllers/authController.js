@@ -47,3 +47,19 @@ exports.restrictTo = (...roles) => {
     next();
   };
 };
+
+exports.VerifyExternalAccess = catchAsync(async (req, res, next) => {
+  let token;
+  if (req.headers.api_key && req.headers.api_key.startsWith('Bearer')) {
+    token = req.headers.api_key.split(' ')[1];
+  }
+  console.log(token);
+
+  if (!token)
+    return next(new AppError('Please provide an API_KEY to continue', 401));
+
+  if (token !== process.env.INTERNAL_API_KEY)
+    return next(new AppError('Wrong API_KEY, access denied', 401));
+
+  next();
+});
