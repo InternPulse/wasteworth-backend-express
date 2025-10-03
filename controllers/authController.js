@@ -53,7 +53,6 @@ exports.VerifyExternalAccess = catchAsync(async (req, res, next) => {
   if (req.headers.api_key && req.headers.api_key.startsWith('Bearer')) {
     token = req.headers.api_key.split(' ')[1];
   }
-  console.log(token);
 
   if (!token)
     return next(new AppError('Please provide an API_KEY to continue', 401));
