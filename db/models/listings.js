@@ -57,6 +57,18 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         defaultValue: null,
       },
+      image_url: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      phone: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
     },
     {
       tableName: 'listings',
