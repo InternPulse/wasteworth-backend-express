@@ -161,8 +161,16 @@ exports.getUserListingData = catchAsync(async (req, res, next) => {
       status: 'completed',
     },
   });
+  const recentListing = await Listing.findAll({
+    where: {
+      user_id_id: req.user.id,
+    },
+    order: [['created_at', 'DESC']],
+    limit: 5,
+  });
   res.status(200).json({
     total_waste_posted: listingdata.length,
     total_waste_completed: totalcompletedlisting.length,
+    recent_listing: recentListing,
   });
 });
