@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const {
   createListing,
   getAllListings,
@@ -6,20 +6,24 @@ const {
   getListingById,
   deleteListing,
   getUserListingData,
-} = require('../controllers/listingController');
+} = require("../controllers/listingController");
 const {
   protect,
   VerifyExternalAccess,
-} = require('../controllers/authController');
+} = require("../controllers/authController");
+const upload = require("../config/multer");
 
 const router = express.Router();
 
 //protect all route
 router.use(protect);
-router.route('/').post(createListing).get(getAllListings);
-router.get('/listingstats', VerifyExternalAccess, getUserListingData);
 router
-  .route('/:id')
+  .route("/")
+  .post(upload.single("image_url"), createListing)
+  .get(getAllListings);
+router.get("/listingstats", VerifyExternalAccess, getUserListingData);
+router
+  .route("/:id")
   .get(getListingById)
   .delete(deleteListing)
   .patch(updateListingStatus);
