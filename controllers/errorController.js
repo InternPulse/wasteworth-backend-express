@@ -1,6 +1,6 @@
 const sendErrDev = (err, req, res) => {
   //During Development we can return the entire error object
-  return res.status(err.statusCode).json({
+  return res.status(err.statusCode || 500).json({
     status: err.status,
     error: err,
     message: err.message,
@@ -11,7 +11,7 @@ const sendErrDev = (err, req, res) => {
 const sendErrProd = (err, req, res) => {
   //operational, trusted error : send message to client(basically error created ourselves)
   if (err.isOperational) {
-    return res.status(err.statusCode).json({
+    return res.status(err.statusCode || 500).json({
       status: err.status,
       message: err.message,
     });
