@@ -1,6 +1,8 @@
-const express = require("express");
-const morgan = require("morgan");
-const cookiesParser = require("cookie-parser");
+const express = require('express');
+const morgan = require('morgan');
+const cookiesParser = require('cookie-parser');
+const helmet = require('helmet')
+const cors = require('cors')
 const app = express();
 
 const AppError = require("./utils/appError");
@@ -16,6 +18,15 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
+// CORS and Security
+const corsOptions = {
+  origin: ['https://wasteworth-backend-django.onrender.com'],
+  metthods: ['GET', 'POST', 'PUT', 'DELETE'],
+  Headers: ['Content-Type', 'Authorization']
+}
+
+app.use(helmet())
+app.use(cors(corsOptions))
 //body-parser
 app.use(express.json());
 app.use(cookiesParser());
