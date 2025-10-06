@@ -26,14 +26,13 @@ const globalLimiter = createLimiter({
 });
 
 // Default auth limiter (5 requests / 1 minute)
-const authLimiter = createLimiter({
-  windowMs: 1 * 60 * 1000,
-  max: 5,
-  message: "Too many authentication attempts, please try again later",
-});
+// const authLimiter = createLimiter({
+//   windowMs: 1 * 60 * 1000,
+//   max: 5,
+//   message: "Too many authentication attempts, please try again later",
+// });
 
 module.exports = {
   createLimiter,
   globalLimiter,
-  authLimiter,
 };
