@@ -1,42 +1,44 @@
 'use strict';
 
 module.exports = (sequelize, DataTypes) => {
-  const Notification = sequelize.define('Notification', {
-    id: {
-      type: DataTypes.UUID,
-      primaryKey: true,
-      defaultValue: DataTypes.UUIDV4,
-    },
-    userId: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: 'Users', 
-        key: 'id',
+  const Notification = sequelize.define(
+    'Notification',
+    {
+      id: {
+        type: DataTypes.UUID,
+        primaryKey: true,
+        defaultValue: DataTypes.UUIDV4,
       },
-      onDelete: 'CASCADE',
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'userId',
+        references: {
+          model: 'users',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
+      },
+      type: {
+        type: DataTypes.ENUM('pickup', 'reward', 'marketplace', 'general'),
+        allowNull: false,
+      },
+      message: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
+      is_read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
-    type: {
-      type: DataTypes.ENUM('pickup', 'reward', 'marketplace', 'general'),
-      allowNull: false,
-    },
-    message: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-    },
-    created_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
-    },
-    is_read: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-  }, {
-    tableName: 'notifications',
-    timestamps: false, 
-  });
+    {
+      tableName: 'notifications',
+      timestamps: true,
+      underscored: true,
+      updatedAt: false,
+    }
+  );
 
   // Associations
   Notification.associate = (models) => {

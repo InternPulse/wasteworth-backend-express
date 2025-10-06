@@ -1,35 +1,30 @@
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { Notification, User } = require("../db/models");
+const { clearCache } = require("../Middleware/cache");
+const { Op } = require("sequelize");
 
 // Get user notifications with pagination and optional filtering
-exports.getUserNotifications = catchAsync(async (req, res) => {
-  const { userId } = req.params;
-  const { page = 1, limit = 20, is_read, type } = req.query;
+exports.getUserNotifications = catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
+  const { page = 1, limit = 20, isRead, type } = req.query;
 
-  // Validate userId as UUID
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(userId)) {
-    throw new AppError("Invalid user ID provided (must be a valid UUID)", 400);
+  // Validate userId
+  const parsedUserId = userId; // already a string from JWT/session
+  if (!parsedUserId || typeof parsedUserId !== "string") {
+    return new AppError("Invalid user ID provided", 400);
   }
 
-  // Validate user exists
-  const user = await User.findByPk(userId);
-  if (!user) {
-    throw new AppError("User not found", 404);
-  }
-
-  // Validate and sanitize pagination params
-  const parsedPage = Math.max(1, parseInt(page, 10));
-  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10)));
+  // Validate pagination params
+  const parsedPage = Math.max(1, parseInt(page));
+  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit)));
   const offset = (parsedPage - 1) * parsedLimit;
 
   if (isNaN(parsedPage)) {
-    throw new AppError("Invalid page number provided", 400);
+    return new AppError("Invalid page number provided", 400);
   }
   if (isNaN(parsedLimit)) {
-    throw new AppError(
+    return new AppError(
       "Invalid limit provided. Must be between 1 and 100",
       400
     );
@@ -37,21 +32,16 @@ exports.getUserNotifications = catchAsync(async (req, res) => {
 
   // Build where clause with optional filters
   const where = { userId };
-  if (is_read !== undefined) {
-    where.is_read = is_read === "true";
+  if (isRead !== undefined) {
+    where.is_read = isRead === "true";
   }
-  if (type) {
-    const validTypes = ["pickup", "reward", "marketplace", "general"];
-    if (!validTypes.includes(type)) {
-      throw new AppError(
-        `Invalid notification type. Must be one of: ${validTypes.join(", ")}`,
-        400
-      );
-    }
+  if (type && ["pickup", "reward", "marketplace", "general"].includes(type)) {
     where.type = type;
+  } else if (type) {
+    return new AppError("Invalid notification type provided", 400);
   }
 
-  // Query with pagination, filters, and optimized attributes
+  // Query with pagination and filters
   const { count, rows: notifications } = await Notification.findAndCountAll({
     where,
     order: [["created_at", "DESC"]],
@@ -78,17 +68,16 @@ exports.getUserNotifications = catchAsync(async (req, res) => {
   const totalPages = Math.ceil(count / parsedLimit);
 
   res.status(200).json({
-    success: true,
-    data: {
-      notifications,
-      pagination: {
-        currentPage: parsedPage,
-        totalPages,
-        totalCount: count,
-        limit: parsedLimit,
-        hasNextPage: parsedPage < totalPages,
-        hasPrevPage: parsedPage > 1,
-      },
+    status: "success",
+    length: notifications.length,
+    notifications,
+    pagination: {
+      currentPage: parsedPage,
+      totalPages,
+      totalCount: count,
+      limit: parsedLimit,
+      hasNextPage: parsedPage < totalPages,
+      hasPrevPage: parsedPage > 1,
     },
   });
 });
@@ -96,41 +85,102 @@ exports.getUserNotifications = catchAsync(async (req, res) => {
 exports.sendNotification = catchAsync(async (req, res) => {
   const { userId, type, message } = req.body;
 
+  // Validate request body
   if (!userId || !type || !message) {
-    throw new AppError("Missing required fields: userId, type, message", 400);
+    return new AppError("Missing required fields: userId, type, message", 400);
   }
 
+  // Validate notification type
   const validTypes = ["pickup", "reward", "marketplace", "general"];
   if (!validTypes.includes(type)) {
-    throw new AppError(
+    return new AppError(
       `Invalid notification type. Must be one of: ${validTypes.join(", ")}`,
       400
     );
-  }
-
-  // Validate userId is a valid UUID string (no parseInt)
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(userId)) {
-    throw new AppError("Invalid user ID provided (must be a valid UUID)", 400);
-  }
-
-  // Validate user exists
-  const user = await User.findByPk(userId);
-  if (!user) {
-    throw new AppError("User not found", 404);
   }
 
   const notification = await Notification.create({
     userId,
     type,
     message,
-    created_at: new Date(),
-    is_read: false,
+    isRead: false,
   });
 
+  // Clear notification caches
+  try {
+    await clearCache(`cache:/api/v1/notifications*`);
+  } catch (err) {
+    console.error("Redis cache clear error:", err);
+  }
+
   res.status(201).json({
-    success: true,
-    notification,
+    status: "success",
+    data: notification,
+  });
+});
+
+exports.markNotificationAsRead = catchAsync(async (req, res) => {
+  const { notificationId } = req.params;
+
+  if (!notificationId) {
+    return new AppError("Missing required field: notificationId", 400);
+  }
+
+  const notification = await Notification.findOne({
+    where: {
+      id: notificationId,
+      userId: req.user.id,
+    },
+  });
+
+  if (!notification) {
+    return new AppError("Notification not found", 404);
+  }
+
+  await notification.update({ is_read: true });
+
+  // Clear notification caches
+  try {
+    await clearCache(`cache:/api/v1/notifications*`);
+  } catch (err) {
+    console.error("Redis cache clear error:", err);
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: notification,
+  });
+});
+
+exports.deleteNotification = catchAsync(async (req, res) => {
+  const { notificationId } = req.params;
+
+  if (!notificationId) {
+    return new AppError("Missing required field: notificationId", 400);
+  }
+
+  const notification = await Notification.findOne({
+    where: {
+      id: notificationId,
+      userId: req.user.id,
+    },
+  });
+
+  if (!notification) {
+    return new AppError("Notification not found", 404);
+  }
+
+  await notification.destroy();
+
+  // Clear notification caches
+  try {
+    await clearCache(`cache:/api/v1/notifications*`);
+  } catch (err) {
+    console.error("Redis cache clear error:", err);
+  }
+
+  res.status(204).json({
+    status: "success",
+    data: null,
   });
 });

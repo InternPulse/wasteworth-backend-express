@@ -8,11 +8,8 @@ const globalErrorHandler = require('./controllers/errorController');
 const ListingRouter = require('./router/listingRouter');
 const MarketPlaceRouter = require('./router/marketplaceRouter');
 const notificationRouter = require('./router/notificationRouter');
-const {
-  protect,
-  restrict,
-  restrictTo,
-} = require('./controllers/authController');
+const { protect, restrictTo } = require('./controllers/authController');
+const redisClient = require('./config/redis');
 
 //development-logging
 if (process.env.NODE_ENV === 'development') {
@@ -23,25 +20,21 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json());
 app.use(cookiesParser());
 
-//routes//
-//-test-route
-app.get(
-  '/api/v1/test',
-  protect,
-  restrictTo('collector', 'disposer'),
-  async (req, res) => {
-    res.status(200).json({
-      status: 'success',
-      length: 1,
-      data: 'working',
-    });
-  }
-);
+// Initialize Redis connection
+redisClient.connect()
+  .then(() => console.log('Redis connected successfully'))
+  .catch(err => console.error('Redis connection failed:', err));
 
-//main-routes
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  await redisClient.disconnect();
+  process.exit(0);
+});
+
+//routes//
 app.use('/api/v1/listings', ListingRouter);
 app.use('/api/v1/marketplace/listings', MarketPlaceRouter);
-app.use('/api/v1', notificationRouter);
+app.use('/api/v1/notifications', notificationRouter);
 
 app.use((req, res, next) => {
   return next(

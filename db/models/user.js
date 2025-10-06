@@ -66,10 +66,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         defaultValue: null,
       },
-      wallet_balance: {
-        type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0.0,
-      },
     },
     {
       tableName: 'users',

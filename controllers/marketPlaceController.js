@@ -1,7 +1,7 @@
 const catchAsync = require('../utils/catchAsync');
-const { MarketplaceListing } = require('../db/models');
-const { Listing } = require('../db/models');
-const { Op } = require('sequelize');
+const { MarketplaceListing, Listing } = require('../db/models');
+const { clearCache, clearCacheKey } = require('../Middleware/cache');
+const { Op, where } = require('sequelize');
 const AppError = require('../utils/appError');
 
 exports.getAllMarketPlaceListing = catchAsync(async (req, res, next) => {
@@ -16,6 +16,7 @@ exports.getAllMarketPlaceListing = catchAsync(async (req, res, next) => {
       as: 'listing',
     },
   });
+
   res.status(200).json({
     status: 'success',
     length: marketPlaceListings.length,
@@ -44,12 +45,45 @@ exports.acceptListing = catchAsync(async (req, res, next) => {
       },
     },
   });
+
   await marketPlaceListing.update({
     recycler_id_id: req.user.id,
   });
 
+  // Clear relevant caches
+  try {
+    // Marketplace caches
+    await clearCacheKey(`cache:/api/v1/marketplace:${req.user.id}`); 
+    await clearCacheKey(`cache:/api/v1/marketplace/myAccepted:${req.user.id}`); 
+  } catch (err) {
+    console.error('Redis cache clear error:', err);
+  }
+
   res.status(200).json({
     status: 'success',
     message: 'Listing Accepted',
+    data: {
+      listing,
+      marketPlaceListing,
+    },
+  });
+});
+
+exports.getMyAcceptedListing = catchAsync(async (req, res, next) => {
+  const myAccepted = await MarketplaceListing.findAll({
+    where: {
+      recycler_id_id: req.user.id,
+    },
+    include: {
+      model: Listing,
+      as: 'listing',
+      attributes: ['id', 'status'],
+    },
+  });
+
+  res.status(200).json({
+    status: 'success',
+    length: myAccepted.length,
+    data: myAccepted,
   });
 });
