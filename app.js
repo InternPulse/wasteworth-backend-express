@@ -24,7 +24,7 @@ const corsOptions = {
     'http://localhost:5173',
     'https://wasteworth-backend-django.onrender.com',
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
