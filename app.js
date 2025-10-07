@@ -23,6 +23,7 @@ const corsOptions = {
   origin: [
     'http://localhost:5173',
     'https://wasteworth-backend-django.onrender.com',
+    'https://wastewhat.vercel.app',
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
