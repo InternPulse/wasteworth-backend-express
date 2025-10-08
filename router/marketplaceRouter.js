@@ -9,8 +9,8 @@ const { protect, restrictTo } = require('../controllers/authController');
 const router = express.Router();
 
 router.use(protect);
-router.route('/').get(restrictTo('collector'), getAllMarketPlaceListing);
+router.route('/').get(restrictTo('recycler'), getAllMarketPlaceListing);
 router.route('/myAccepted').get(getMyAcceptedListing);
-router.patch('/:listingID', restrictTo('collector'), acceptListing);
+router.patch('/:listingID', restrictTo('recycler'), acceptListing);
 
 module.exports = router;
