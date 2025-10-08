@@ -15,7 +15,18 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0,
       },
       escrow_status: {
-        type: DataTypes.ENUM('pending', 'locked', 'released', 'cancelled'),
+        type: DataTypes.ENUM(
+          'pending',
+          'payment_initiated',
+          'locked',
+          'item_released',
+          'confirmed',
+          'released',
+          'refund',
+          'failed',
+          'cancelled',
+          'disputed'
+        ),
         allowNull: false,
         defaultValue: 'pending',
       },
@@ -34,6 +45,41 @@ module.exports = (sequelize, DataTypes) => {
           model: 'users',
           key: 'id',
         },
+      },
+      payment_initiated_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+      payment_locked_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+      item_released_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+      confirmed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+      released_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
+      disposer_confirmed: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      recycler_confirmed: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
       },
     },
     {
